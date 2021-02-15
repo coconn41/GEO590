@@ -18,7 +18,7 @@ newdat3 = newdat %>%
   filter(Type!="ACS Yearly Estimates")
 
 
-pdf(width = 7,height = 4,file = "Homework1_graph.pdf")
+#pdf(width = 7,height = 4,file = "Homework1_graph.pdf")
 ggplot()+
   geom_line(data=newdat2,aes(Year,POP,group=1,col=Type))+
   geom_point(data = newdat2,aes(Year,POP,group=1,col=Type))+
@@ -27,4 +27,4 @@ ggplot()+
   labs(title = "Population Estimates Using Census Data",
        caption = "Data gathered from data.census.gov on 2/15/2021")+
   theme_classic()
-dev.off()  
+#dev.off()  
