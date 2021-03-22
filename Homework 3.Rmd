@@ -1,0 +1,58 @@
+---
+title: "Homework 3_word"
+author: "Collin O'Connor"
+date: "3/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libs,echo=FALSE,warning=F,message=F}
+library(ipumsr)
+library(tidyverse)
+library(kableExtra)
+```
+
+```{r loaddata,echo=F,warning=F,message=F,comment=F,results='hide'}
+ddi <- read_ipums_ddi("usa_00004.xml")
+data <- read_ipums_micro(ddi)
+```
+
+
+```{r analyze,echo=F}
+incmean = data %>% 
+          filter(INCTOT != 9999999) %>%
+          summarize(mean = format(mean(INCTOT,na.rm=T),nsmall = 2))
+acremean = data %>%
+  filter(ACREHOUS != 0) %>%
+  summarize(mean = format(mean(ACREHOUS,na.rm = T),nsmall=2))
+densitymean = data %>%
+  summarize(mean = format(mean(DENSITY, na.rm = T),nsmall=2))
+
+incstdev = data %>% 
+          filter(INCTOT != 9999999) %>%
+          summarize(stdev = format(sd(INCTOT,na.rm=T),nsmall=2))
+acrestdev = data %>%
+  filter(ACREHOUS != 0) %>%
+  summarize(stdev = format(sd(ACREHOUS,na.rm = T),nsmall = 2))  
+densitystdev = data %>%
+  summarize(stdev = format(sd(DENSITY, na.rm = T),nsmall = 2))
+
+table=data.frame(row.names = c("Income","Houshold Acres","Population Density","Person W. Rep"),"Observations" = c(paste(
+  nrow(data %>% filter(INCTOT != 9999999))),
+  paste(nrow(data %>% filter(ACREHOUS != 0))),
+  paste(nrow(data)),paste(sum(data$PERWT))),
+          "Mean" = c(paste(incmean),paste(acremean),paste(densitymean),""),
+          "Stdev" = c(paste(incstdev),paste(acrestdev),paste(densitystdev),""))
+```
+
+```{r table,echo=F}
+ knitr::kable(table,format="html",
+    caption = 'Summary statistics for 3 IPUMS Variables (2019 ACS)',
+    label = "test") %>%
+    kable_styling(bootstrap_options = "striped") %>%
+  as_image(width=10,file='Hmwk3table.png')
+```
+##### Note that income needs further analysis and cleaning. Code values change by year according to ddi file. Code to generate statistics is availabe upon request.
