@@ -3,6 +3,7 @@ library(spdep)
 library(lme4)
 library(AER)
 library(MASS)
+library(sjPlot)
 #Dataset is Final_tidy_dataset
 
 #merge with shapefiles
@@ -12,13 +13,6 @@ Final_shape_data = left_join(NYS_only_counties,Final_tidy_dataset)
 Final_shape_data$centroid=st_centroid(Final_shape_data$geometry)
 Final_shape_data$longitude=st_coordinates(st_centroid(Final_shape_data$geometry))[,1]
 Final_shape_data$latitude=st_coordinates(st_centroid(Final_shape_data$geometry))[,2]
-
-tm_shape(Final_shape_data)+
-  tm_polygons(col='Emps_per_pop')
-
-tm_shape(Final_shape_data) +
-  tm_polygons(col="Cases")+
-  tm_facets(by='year')
 
 #below is plain model, controlling for longitude
 
@@ -38,7 +32,8 @@ summary(model2)
 acf(residuals(model2))
 #autocorrelation!
 
-model3=glmer(formula=Cases ~ Emps_per_pop + (1|County),
+
+model3=glmer(formula=Cases ~ Emps_per_pop + (1|County) + (1|year),
               data=Final_shape_data,family="poisson"(link='log'),
               offset=log(estimate))
 
@@ -58,11 +53,15 @@ overdisp_fun = function(model){
 overdisp_fun(model3)
 # we have overdisperson
 
-model4 = glmer.nb(formula = Cases ~ Emps_per_pop + (1|County),
+
+Final_shape_data$longcat=ifelse(Final_shape_data$longitude>=-75.25,1,0)
+Final_shape_data$longcat2=ifelse(Final_shape_data$longitude<=-76,1,0)
+
+model4 = glmer.nb(formula = Cases ~ Emps_per_pop + longcat + (1|County) + (1|year),
                   data=Final_shape_data,offset=log(estimate))
 summary(model4)
 acf(residuals(model4))
-#Emps is not significant, look for moran's i residuals
+#Emps is significant, look for moran's i residuals
 
 
 
@@ -114,12 +113,13 @@ dt=st_drop_geometry(Final_shape_data)
 
 Coordinates=SpatialPointsDataFrame(cbind(dt$longitude,dt$latitude),dt)
 
-Final_shape_data$weights=autocov_dist(z=residuals(model4),xy=Coordinates,type='inverse.squared',longlat = T)
+Final_shape_data$weights=autocov_dist(z=residuals(model4),xy=Coordinates,type='inverse',longlat = T)
 
 #try to model with autocov weights
 
-model5 = glmer.nb(formula = Cases ~ Emps_per_pop + (1|County),
+model5 = glmer.nb(formula = Cases ~ Emps_per_pop + longcat + weights +(1|County) + (1|year),
                   data=Final_shape_data,offset=log(estimate))
+
 summary(model5)
 acf(residuals(model5))
 #still less temporal autocorrelation
@@ -154,3 +154,18 @@ moran.test(residuals(model4),listw=mat_list)
 # adding spatial weighst did not reduce autocorrelation
 # likely because distances are far apart, cluster distance is large between centroid?
 
+#AIC is lowest for model5
+model5 = glmer.nb(formula = Cases ~ Emps_per_pop + longcat + weights +(1|County) + (1|year),
+                  data=Final_shape_data,offset=log(estimate))
+Final_shape_data$`Percent of Population Employed Outdoors`=Final_shape_data$Emps_per_pop
+Final_shape_data$`Longitude < -75.25`=Final_shape_data$longcat
+Final_shape_data$`Autocovariate Weights`=Final_shape_data$weights
+Final_shape_data$`Cases of Lyme disease`=Final_shape_data$Cases
+Final_shape_data$Year=Final_shape_data$year
+
+
+tab_model(model5,model4,show.aic = T,title = "Final model with and without spatial weights",
+          pred.labels = c("Intercept","Percent of Population Employed Outdoors","Longitude \u2265 -75.25",
+                          "Autocovariate Weights"),file="RegressionTable.html")
+library(webshot)
+webshot("RegressionTable.html","FinalTable.png",vheight = 8,vwidth=12,)
