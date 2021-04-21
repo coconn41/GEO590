@@ -6,6 +6,15 @@ library(MASS)
 library(sjPlot)
 #Dataset is Final_tidy_dataset
 
+sum_stats= Final_tidy_dataset %>%
+  group_by(year) %>%
+  summarize(mean = mean(Cases),
+            stdev = sd(Cases),
+            min = min(Cases),
+            max = max(Cases))
+
+
+
 #merge with shapefiles
 names(NYS_only_counties)[6]="County"
 Final_shape_data = left_join(NYS_only_counties,Final_tidy_dataset)
@@ -40,7 +49,11 @@ model3=glmer(formula=Cases ~ Emps_per_pop + (1|County) + (1|year),
 summary(model3)
 acf(residuals(model3))
 #temporal autocorrelation is controlled
-
+jpeg(filename = "tempcontrol.jpeg",width=12,height=6,units='in',res=300)
+par(mfrow=c(1,2))
+acf(residuals(model2))
+acf(residuals(model3))
+dev.off()
 #check for overdispersion
 overdisp_fun = function(model){
   rdf <- df.residual(model)
@@ -150,6 +163,9 @@ tm_shape(new_df2)+
 
 moran.test(residuals(model5),listw=mat_list)
 moran.test(residuals(model4),listw=mat_list)
+
+AIC(model5)
+AIC(model4)
 
 # adding spatial weighst did not reduce autocorrelation
 # likely because distances are far apart, cluster distance is large between centroid?

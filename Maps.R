@@ -14,9 +14,12 @@ Final_shape_data$latitude=st_coordinates(st_centroid(Final_shape_data$geometry))
 Final_shape_data$longcat=ifelse(Final_shape_data$longitude>=-75.25,1,0)
 Final_shape_data$longcat2=ifelse(Final_shape_data$longitude<=-76,1,0)
 
+Final_shape_data$inc=(Final_shape_data$Cases/Final_shape_data$estimate)*100000
+
 cases_by_year_map=tm_shape(Final_shape_data)+
-  tm_polygons(col='Cases',
-              breaks=c(0,50,100,150,200,300,500,1000),
+  tm_polygons(col='inc',
+              breaks=c(0,250,500,1000,2000,3000,5000,10000),
+              title = "Lyme disease\nincidence per 100,000",
               palette=viridisLite::viridis(7),border.col = 'black')+
   tm_facets(by='year')+
   tm_layout(legend.text.size = 1.5,legend.title.size = 1.5)+
